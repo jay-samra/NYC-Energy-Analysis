@@ -49,24 +49,74 @@ def create_choropleth_map(dataframe, color, range_color, labels):
         height=650
     )
     return fig
+# Pie Chart ----------------------------------
+# Data Cleaning
+# df.rename(columns={'Electricity Use - Grid Purchase and Generated from Onsite Renewable Systems (kWh)' : 'electricUse'}, inplace = True)
+# df.rename(columns={'Net Emissions (Metric Tons CO2e)' : 'netEmissions'}, inplace = True)
+# df.rename(columns={'Weather Normalized Site Energy Use' : 'normalUse'}, inplace = True)
+# df['electricUse'] = df['electricUse'].replace('Not Available', 0)
+# df['electricUse'] = df['electricUse'].astype(float)
+# city_df = df.groupby('City')['electricUse'].mean()
 
-
+# fig1 = px.pie(df,values=[city_df['Queens'], city_df['Bronx'], city_df['Manhattan'], city_df['Staten Island'], city_df['Brooklyn']])
+# --------------------------------------------
 app = Dash()
 app.layout = [
+    html.H1('New York City Building Energy Dashboard',
+            style={'textAlign': 'center', 'color': 'black', 'font-size': '30px', 'textDecoration': 'underline'}),
     dcc.Dropdown(id='measurments', value='ENERGY STAR Score',
                  options=['ENERGY STAR Score',
                           'Indoor Water Use (All Water Sources) (kgal)',
                           'Year Built']
     ),
     dcc.Graph(id='zip-map'),
-    html.Div(id='filler')
+    html.Div(id='filler'),
+
+    dcc.Dropdown(id='pieMeasurements', options=['Electricity Use - Grid Purchase and Generated from Onsite Renewable Systems (kWh)', 'Net Emissions (Metric Tons CO2e)', 'ENERGY STAR Score'],
+                 value='Onsite Renewable Systems (kWh)'),
+    dcc.Graph(id='pieChart',)
 ]
 
+@callback(
+    Output('pieChart', 'figure'),
+    Input('pieMeasurements', 'value'),
+)
+def pie_chart(option_chosen):
+
+    labels = ['Queens', 'Bronx', 'Manhattan', 'Staten Island', 'Brooklyn']
+    df[option_chosen] = df[option_chosen].replace('Not Available', 0)
+    df[option_chosen] = df[option_chosen].astype(float)
+    city_df = df.groupby('City')[option_chosen].mean()
+    values = [
+        city_df['Queens'].sum(),
+        city_df['Bronx'].sum(),
+        city_df['Manhattan'].sum(),
+        city_df['Staten Island'].sum(),
+        city_df['Brooklyn'].sum()
+    ]
+
+
+    if option_chosen == 'Electricity Use - Grid Purchase and Generated from Onsite Renewable Systems (kWh)':
+
+        fig = go.Figure(data=[
+            go.Pie(labels=labels, values=values, hole=0.3)]     ,)
+        # fig.add_trace(go.Pie(labels=labels, values=[1,2,3,4,5]),)
+
+    elif option_chosen == 'Net Emissions (Metric Tons CO2e)':
+
+        fig = go.Figure(data=[
+            go.Pie(labels=labels, values=values, hole=0.3)], )
+    elif option_chosen == 'ENERGY STAR Score':
+
+        fig = go.Figure(data=[
+            go.Pie(labels=labels, values=values, hole=0.3)], )
+    return fig
+
+# choropleth function
 @callback(
     Output('zip-map', 'figure'),
     Input('measurments', 'value')
 )
-# choropleth function
 def make_graph(measurment_chosen):
     df[measurment_chosen] = pd.to_numeric(df[measurment_chosen], errors='coerce')
     df_filtered = df.groupby('Postal Code')[measurment_chosen].mean().reset_index()
@@ -102,7 +152,7 @@ def make_graph(clicked_data):
                              color_continuous_scale=['green', 'orange', 'red'],
                              zoom=12,
                              # size_max='Site-Electricity-Intensity',  # Maximum size of points
-                             height=400)
+                             height=650)
         fig.update_traces(marker=dict(size=11, opacity=0.8))
         return dcc.Graph(figure=fig)
     else:
@@ -110,4 +160,4 @@ def make_graph(clicked_data):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
