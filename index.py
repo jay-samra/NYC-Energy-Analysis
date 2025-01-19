@@ -83,6 +83,34 @@ fig.update_layout(
     )
 )
 # --------------------------------------------
+# Bar Graph ----------------------------------
+df['ENERGY STAR Score'] = df['ENERGY STAR Score'].replace('Not Available', 0)
+df['ENERGY STAR Score'] = df['ENERGY STAR Score'].astype(float)
+
+# adding the zipcodes that will be used
+zip_df = df[df['Postal Code'].isin(['11378', '10461', '11691', '10029', '11105', '11230', '11354', '11207', '11432', '11435', '11432', '11211', '10457',
+                                   '10459', '10453', '10452', '10459', '10456', '10031', '11432', '11211', '11106', '10027', '10471', '11231', '11211',
+                                   '11106', '10027', '10471', '11231', '11101', '10451', '11356', '11201'])]
+
+zip_df = zip_df.groupby('Postal Code')['ENERGY STAR Score'].mean().reset_index()
+
+zip_df.columns = ['Postal Code', 'Mean ENERGY STAR Score']
+
+figBox = go.Figure(
+    data=[
+        go.Bar(x=zip_df['Postal Code'], y=zip_df['Mean ENERGY STAR Score'], name="Gold", marker_color='rgb(26, 118, 255)'),
+        # go.Bar(x=zip_df['Postal Code'], y=zip_df['ENERGY STAR Score'], name="Silver"),
+        # go.Bar(x=zip_df['Postal Code'], y=zip_df['ENERGY STAR Score'], name="Bronze"),
+    ],
+    layout=dict(
+        barcornerradius=5,
+    ),
+)
+
+figBox.update_traces(marker=dict(line=dict(width=2)))
+figBox.update_layout(title=dict(text="Figure Title"),
+                  template='plotly_white')
+# --------------------------------------------
 app = Dash()
 app.layout = [
     html.H1('New York City Building Energy Dashboard',
@@ -104,6 +132,8 @@ app.layout = [
 
     dcc.Dropdown(df['Largest Property Use Type'].unique()),
     dcc.Graph(id='pieChart1', figure=fig),
+
+    dcc.Graph(id='barGraph', figure=figBox),
 ]
 
 @callback(

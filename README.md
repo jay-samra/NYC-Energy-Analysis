@@ -1,4 +1,4 @@
-## Analyzing New York City's energy usage and creating an interactive dashboard in an effort to promote decarbonisation
+## Analyzing New York City's energy usage and creating an interactive dashboard in an effort to promote decarbonisation (Open Data Week Project)
 
 ![Screenshot 2025-01-15 105413](https://github.com/user-attachments/assets/2f0d83a9-f626-4e7b-80c1-2c8bb33fd8d6)
 ### Displaying each building's Median Energy Use Intensity
