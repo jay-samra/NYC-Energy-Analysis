@@ -8,6 +8,8 @@ import pandas as pd
 import json
 import zipfile
 
+from pandas.plotting import boxplot
+
 # https://cartographyvectors.com/map/1604-new-york-zip-codes
 with open("new-york-zip-codes-_1604.geojson") as f:
     zip_geojson = json.load(f)
@@ -60,6 +62,27 @@ def create_choropleth_map(dataframe, color, range_color, labels):
 
 # fig1 = px.pie(df,values=[city_df['Queens'], city_df['Bronx'], city_df['Manhattan'], city_df['Staten Island'], city_df['Brooklyn']])
 # --------------------------------------------
+# Box Plot -----------------------------------
+df1 = df.replace(['Manufacturing/Industrial Plant', 'Repair Services (Vehicle, Shoe, Locksmith, etc.)', 'Hospital (General Medical & Surgical)',
+                 'Transportation Terminal/Station', 'Fitness Center/Health Club/Gym', 'Personal Services (Health/Beauty, Dry Cleaning, etc.)',
+                 'Drinking Water Treatment & Distribution', 'Urgent Care/Clinic/Other Outpatient', 'Convenience Store without Gas Station'],
+                 ['Industrial Plant', 'Repair Services', 'Hospital', 'Transportation', 'Gym', 'Personal Services', 'Water Treatment', 'Urgent Care',
+                 'Store']
+                )
+df1_sorted = df1.sort_values(by='Site Energy Use (kBtu)', ascending=True)
+fig = px.box(df1, df1['Largest Property Use Type'], df1['Site Energy Use (kBtu)'])
+fig.update_layout(
+    height=700,
+    width=2000,
+    margin=dict(l=50, r=50, t=50, b=50),)
+
+# y axis adjustment
+fig.update_layout(
+    yaxis=dict(
+        tickvals=[100000, 200000]
+    )
+)
+# --------------------------------------------
 app = Dash()
 app.layout = [
     html.H1('New York City Building Energy Dashboard',
@@ -74,7 +97,13 @@ app.layout = [
 
     dcc.Dropdown(id='pieMeasurements', options=['Electricity Use - Grid Purchase and Generated from Onsite Renewable Systems (kWh)', 'Net Emissions (Metric Tons CO2e)', 'ENERGY STAR Score'],
                  value='Onsite Renewable Systems (kWh)'),
-    dcc.Graph(id='pieChart',)
+    # add default using figure=figure
+    dcc.Graph(id='pieChart'),
+
+    html.Div(id='filler1'),
+
+    dcc.Dropdown(df['Largest Property Use Type'].unique()),
+    dcc.Graph(id='pieChart1', figure=fig),
 ]
 
 @callback(
@@ -100,16 +129,19 @@ def pie_chart(option_chosen):
 
         fig = go.Figure(data=[
             go.Pie(labels=labels, values=values, hole=0.3)]     ,)
-        # fig.add_trace(go.Pie(labels=labels, values=[1,2,3,4,5]),)
-
+        fig.update_layout(annotations=[dict(text='kWh', xanchor='center', showarrow=False, font_size=20)])
+        # fig.add_trace( line=dict( width=2) )
     elif option_chosen == 'Net Emissions (Metric Tons CO2e)':
 
         fig = go.Figure(data=[
             go.Pie(labels=labels, values=values, hole=0.3)], )
+        fig.update_layout(annotations=[dict(text='CO2e', xanchor='center', showarrow=False, font_size=20)])
     elif option_chosen == 'ENERGY STAR Score':
 
         fig = go.Figure(data=[
             go.Pie(labels=labels, values=values, hole=0.3)], )
+        fig.update_layout(annotations=[dict(text='ESS',
+                      font_size=20, showarrow=False, xanchor='center')])
     return fig
 
 # choropleth function
