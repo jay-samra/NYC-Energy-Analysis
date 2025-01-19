@@ -15,6 +15,8 @@
 ### Energy Star Score per borough 
 ![Screenshot 2025-01-16 172153](https://github.com/user-attachments/assets/d2aeda44-e64e-4dbf-9b3e-50815519bbde)
 
+### Boxplot measuring Site Energy User per property type
+![image](https://github.com/user-attachments/assets/5e3d2772-6862-4cc7-9f35-4aec96c2228a)
 
 
 
