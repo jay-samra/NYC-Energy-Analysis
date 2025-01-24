@@ -29,6 +29,8 @@ print(df['MedianEUI'].dtype)
 
 df["Postal Code"] = df["Postal Code"].astype(str)
 
+
+
 def create_choropleth_map(dataframe, color, range_color, labels):
     """
     Creates a choropleth map with customizable range_color and labels.
@@ -48,7 +50,31 @@ def create_choropleth_map(dataframe, color, range_color, labels):
         map_style="open-street-map",
         locations='Postal Code',
         center={"lat": 40.7128, "lon": -74.0060},
-        height=650
+        height=650,
+        color_continuous_scale='matter_r',
+    )
+    return fig
+
+def create_choropleth_emissions(dataframe, color, range_color, labels):
+    """
+    Creates a choropleth map with customizable range_color and labels.
+
+    Returns:
+    - fig: A Plotly choropleth map figure.
+    """
+    fig = px.choropleth_map(
+        data_frame=dataframe,
+        color=color,
+        range_color=range_color,
+        labels=labels,
+        geojson=zip_geojson,
+        opacity=0.5,
+        zoom=10,
+        featureidkey="properties.ZCTA5CE10",
+        map_style="open-street-map",
+        locations='Postal Code',
+        center={"lat": 40.7128, "lon": -74.0060},
+        height=650,
     )
     return fig
 # Pie Chart ----------------------------------
@@ -111,14 +137,21 @@ figBox.update_traces(marker=dict(line=dict(width=2)))
 figBox.update_layout(title=dict(text="Figure Title"),
                   template='plotly_white')
 # --------------------------------------------
-app = Dash()
+app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
+navbar = dbc.NavbarSimple(
+    brand="New York City Energy Analysis Dashboard",
+    brand_href="#",
+    color="primary",
+    dark=True,
+)
 app.layout = [
-    html.H1('New York City Building Energy Dashboard',
-            style={'textAlign': 'center', 'color': 'black', 'font-size': '30px', 'textDecoration': 'underline'}),
+    html.Div(navbar),
+
     dcc.Dropdown(id='measurments', value='ENERGY STAR Score',
                  options=['ENERGY STAR Score',
                           'Indoor Water Use (All Water Sources) (kgal)',
-                          'Year Built']
+                          'Year Built',
+                          'Net Emissions (Metric Tons CO2e)']
     ),
     dcc.Graph(id='zip-map'),
     html.Div(id='filler'),
@@ -134,7 +167,58 @@ app.layout = [
     dcc.Graph(id='pieChart1', figure=fig),
 
     dcc.Graph(id='barGraph', figure=figBox),
+
+    # geojson map
+    dcc.Dropdown(id='geojson1', value='Net Emissions (Metric Tons CO2e)',
+                 options=[
+                          'Net Emissions (Metric Tons CO2e)',]
+                 ),
+    dcc.Graph(id='geojson2'),
+    # html.Div(id='filler'),
 ]
+
+
+# choropleth function
+@callback(
+    Output('zip-map', 'figure'),
+    Input('measurments', 'value')
+)
+def make_graph(measurement_chosen):
+    df[measurement_chosen] = pd.to_numeric(df[measurement_chosen], errors='coerce')
+    df_filtered = df.groupby('Postal Code')[measurement_chosen].mean().reset_index()
+
+    if measurement_chosen == 'ENERGY STAR Score':
+        fig = create_choropleth_map(df_filtered, color=measurement_chosen, range_color=[35, 75],
+                                    labels={'ENERGY STAR Score': 'Energy Score'}, )
+    elif measurement_chosen == 'Indoor Water Use (All Water Sources) (kgal)':
+        fig = create_choropleth_map(df_filtered, color=measurement_chosen, range_color=[2000, 8000],
+                                    labels={'Indoor Water Use (All Water Sources) (kgal)': 'Indoor Water Use'})
+    elif measurement_chosen == 'Year Built':
+        df_filtered['Year Built'] = df_filtered['Year Built'].astype(int)
+        fig = create_choropleth_map(df_filtered, color=measurement_chosen, range_color=[1925, 1965], labels=None)
+
+    elif measurement_chosen == 'Net Emissions (Metric Tons CO2e)':
+            fig = create_choropleth_map(df_filtered, color=measurement_chosen, range_color=[100, 900],
+                                         labels={"Net Emissions (Metric Tons CO2e)": "Net Emissions"})
+
+
+    return fig
+
+# geojson practice
+@callback(
+    Output('geojson2', 'figure'),
+    Input('geojson1', 'value')
+)
+def make_geojson(measurement_chosen):
+    df[measurement_chosen] = pd.to_numeric(df[measurement_chosen], errors='coerce')
+    df_filtered = df.groupby('Postal Code')[measurement_chosen].mean().reset_index()
+
+    if measurement_chosen == 'Net Emissions (Metric Tons CO2e)':
+        fig = create_choropleth_emissions(df_filtered, color=measurement_chosen, range_color=[100, 900], labels={"Net Emissions (Metric Tons CO2e)" : "Net Emissions"}  )
+
+
+    return fig
+
 
 @callback(
     Output('pieChart', 'figure'),
@@ -174,26 +258,6 @@ def pie_chart(option_chosen):
                       font_size=20, showarrow=False, xanchor='center')])
     return fig
 
-# choropleth function
-@callback(
-    Output('zip-map', 'figure'),
-    Input('measurments', 'value')
-)
-def make_graph(measurment_chosen):
-    df[measurment_chosen] = pd.to_numeric(df[measurment_chosen], errors='coerce')
-    df_filtered = df.groupby('Postal Code')[measurment_chosen].mean().reset_index()
-
-    if measurment_chosen == 'ENERGY STAR Score':
-        fig = create_choropleth_map(df_filtered, color=measurment_chosen, range_color=[35, 75],
-                                    labels={'ENERGY STAR Score': 'Energy Score'}, )
-    elif measurment_chosen == 'Indoor Water Use (All Water Sources) (kgal)':
-        fig = create_choropleth_map(df_filtered, color=measurment_chosen, range_color=[2000, 8000],
-                                    labels={'Indoor Water Use (All Water Sources) (kgal)': 'Indoor Water Use'})
-    elif measurment_chosen == 'Year Built':
-        df_filtered['Year Built'] = df_filtered['Year Built'].astype(int)
-        fig = create_choropleth_map(df_filtered, color=measurment_chosen, range_color=[1925, 1965], labels=None)
-
-    return fig
 
 # zoomed in scatter plot function
 @callback(
